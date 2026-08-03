@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'screens/admin_screen.dart';
 import 'screens/design_screen.dart';
 import 'database/db_helper.dart';
-
+import 'dart:io';
 // Расширение для красивого форматирования чисел (1234567 -> 1 234 567)
+
 extension NumberFormatter on double {
   String toSpaceSeparated() {
     return toStringAsFixed(0).replaceAllMapped(
@@ -14,10 +15,30 @@ extension NumberFormatter on double {
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // Инициализируем локальную базу данных SQLite перед запуском
-  await DesignDbHelper.instance.database;
-  runApp(const TileDesignApp());
+  // 1. Ловим ошибки интерфейса и пишем их в текстовый файл
+  FlutterError.onError = (FlutterErrorDetails details) {
+    try {
+      File('crash_log.txt').writeAsStringSync(
+          'UI Error: ${details.exception}\n',
+          mode: FileMode.append);
+    } catch (e) {}
+  };
+
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Инициализируем твою локальную базу данных SQLite перед запуском
+    await DesignDbHelper.instance.database;
+
+    // Запускаем правильный класс!
+    runApp(const TileDesignApp());
+  } catch (e, stackTrace) {
+    // 2. Ловим фатальные ошибки при запуске на Windows
+    try {
+      File('crash_log.txt').writeAsStringSync('Fatal Crash: $e\n$stackTrace\n',
+          mode: FileMode.append);
+    } catch (err) {}
+  }
 }
 
 class TileDesignApp extends StatelessWidget {
