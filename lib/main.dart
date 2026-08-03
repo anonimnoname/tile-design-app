@@ -46,7 +46,8 @@ class TileDesignApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
       ),
-      home: const DesignScreen(),
+      // ВОТ ОНО: Теперь при запуске открывается главное меню!
+      home: const MainMenuScreen(),
     );
   }
 }
