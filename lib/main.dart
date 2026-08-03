@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'dart:io'; // Добавили для проверки Windows
 
+// Добавили пакеты для базы данных
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -29,8 +30,6 @@ void main() async {
 
   // Инициализируем локальную базу данных SQLite перед запуском
   await DesignDbHelper.instance.database;
-
-  // Запускаем приложение
   runApp(const TileDesignApp());
 }
 
@@ -44,9 +43,9 @@ class TileDesignApp extends StatelessWidget {
       title: '3D Kamron: Дизайн и Склад',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
-      // ВОТ ОНО: Теперь при запуске открывается главное меню!
       home: const MainMenuScreen(),
     );
   }
