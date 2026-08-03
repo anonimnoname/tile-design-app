@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
 import 'screens/admin_screen.dart';
 import 'screens/design_screen.dart';
 import 'database/db_helper.dart';
-import 'dart:io';
-// Расширение для красивого форматирования чисел (1234567 -> 1 234 567)
 
+// Расширение для красивого форматирования чисел (1234567 -> 1 234 567)
 extension NumberFormatter on double {
   String toSpaceSeparated() {
     return toStringAsFixed(0).replaceAllMapped(
@@ -15,30 +19,19 @@ extension NumberFormatter on double {
 }
 
 void main() async {
-  // 1. Ловим ошибки интерфейса и пишем их в текстовый файл
-  FlutterError.onError = (FlutterErrorDetails details) {
-    try {
-      File('crash_log.txt').writeAsStringSync(
-          'UI Error: ${details.exception}\n',
-          mode: FileMode.append);
-    } catch (e) {}
-  };
+  WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
-
-    // Инициализируем твою локальную базу данных SQLite перед запуском
-    await DesignDbHelper.instance.database;
-
-    // Запускаем правильный класс!
-    runApp(const TileDesignApp());
-  } catch (e, stackTrace) {
-    // 2. Ловим фатальные ошибки при запуске на Windows
-    try {
-      File('crash_log.txt').writeAsStringSync('Fatal Crash: $e\n$stackTrace\n',
-          mode: FileMode.append);
-    } catch (err) {}
+  // МАГИЯ ДЛЯ WINDOWS: включаем поддержку SQLite
+  if (Platform.isWindows) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
+
+  // Инициализируем локальную базу данных SQLite перед запуском
+  await DesignDbHelper.instance.database;
+
+  // Запускаем приложение
+  runApp(const TileDesignApp());
 }
 
 class TileDesignApp extends StatelessWidget {
@@ -51,10 +44,9 @@ class TileDesignApp extends StatelessWidget {
       title: '3D Kamron: Дизайн и Склад',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
-      home: const MainMenuScreen(),
+      home: const DesignScreen(),
     );
   }
 }
