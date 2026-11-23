@@ -85,13 +85,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 4),
                   Container(width: 12, height: 34, decoration: BoxDecoration(color: kLight, borderRadius: BorderRadius.circular(2))),
                   const SizedBox(width: 14),
-                  const Text('3D Kamron', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: kLight)),
+                  const Text('3D Kamron · Показ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: kLight)),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Настройки',
                     icon: const Icon(Icons.settings_outlined),
                     onPressed: () async {
-                      await Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(settings: s)));
+                      await Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(settings: s, showAdminPath: false)));
                       await _updateStatus();
                       if (s.usesServer) _sync(silent: true);
                     },
@@ -126,15 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     await _updateStatus();
                   },
                 ),
-                if (s.usesServer) ...[
-                  const SizedBox(height: 14),
-                  _BigButton(
-                    icon: Icons.admin_panel_settings_outlined,
-                    title: 'Админка сайта и заказы',
-                    subtitle: s.adminUrl,
-                    onTap: () => BrowserLauncher.openDefault(s.adminUrl),
-                  ),
-                ],
                 const SizedBox(height: 26),
                 Row(children: [
                   Icon(s.usesServer ? Icons.cloud_done_outlined : Icons.inventory_2_outlined, size: 18, color: kGold),

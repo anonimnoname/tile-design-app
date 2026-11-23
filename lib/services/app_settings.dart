@@ -17,6 +17,9 @@ class AppSettings {
   /// Секретный адрес админки сайта (то, что задано в ADMIN_PATH на сервере).
   String adminPath = 'admin';
 
+  /// Программа «Заказы»: открывать окно заказов сразу при запуске.
+  bool autoOpen = true;
+
   File get _file => File(p.join(dir.path, 'settings.json'));
   Directory get imagesDir => Directory(p.join(dir.path, 'images'));
   Directory get remoteImagesDir => Directory(p.join(dir.path, 'remote_images'));
@@ -24,8 +27,10 @@ class AppSettings {
 
   bool get usesServer => serverUrl.isNotEmpty;
 
-  static Future<AppSettings> load({Directory? baseDir}) async {
-    final dir = baseDir ?? await getApplicationSupportDirectory();
+  /// [sub] — отдельная папка для второй программы («orders»), чтобы настройки не смешивались.
+  static Future<AppSettings> load({Directory? baseDir, String? sub}) async {
+    var dir = baseDir ?? await getApplicationSupportDirectory();
+    if (sub != null) dir = Directory(p.join(dir.path, sub));
     await dir.create(recursive: true);
     final s = AppSettings._(dir);
     await s.imagesDir.create(recursive: true);
@@ -34,6 +39,7 @@ class AppSettings {
       final j = jsonDecode(await s._file.readAsString()) as Map<String, dynamic>;
       s.serverUrl = normalizeUrl(j['serverUrl'] as String? ?? '');
       s.adminPath = (j['adminPath'] as String? ?? 'admin').trim();
+      s.autoOpen = j['autoOpen'] as bool? ?? true;
     } catch (_) {
       // первый запуск — настройки по умолчанию
     }
@@ -41,7 +47,7 @@ class AppSettings {
   }
 
   Future<void> save() async {
-    await _file.writeAsString(jsonEncode({'serverUrl': serverUrl, 'adminPath': adminPath}));
+    await _file.writeAsString(jsonEncode({'serverUrl': serverUrl, 'adminPath': adminPath, 'autoOpen': autoOpen}));
   }
 
   /// «3dkamron.uz/» → «https://3dkamron.uz»

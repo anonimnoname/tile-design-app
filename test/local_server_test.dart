@@ -38,9 +38,9 @@ void main() {
 
     final (c1, html) = await _get(port, '/');
     expect(c1, 200);
-    expect(html, contains('scene3d.js'));
+    expect(html, contains('shared/loader.js'));
 
-    final (c2, js) = await _get(port, '/js/app.js');
+    final (c2, js) = await _get(port, '/constructor/constructor.js');
     expect(c2, 200);
     expect(js.length, greaterThan(1000));
 

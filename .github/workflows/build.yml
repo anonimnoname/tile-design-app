@@ -1,10 +1,11 @@
-name: Build Windows App
+name: Build Windows Apps
 
 on:
   push:
     branches: [ "main", "claude/**" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -31,11 +32,28 @@ jobs:
     - name: Enable Windows Desktop
       run: flutter config --enable-windows-desktop
 
-    - name: Build Windows Release
-      run: flutter build windows --release
+    # Программа 1: «Показ» — 3D-конструктор для ноутбука с телевизором
+    - name: Build «Показ»
+      run: |
+        flutter build windows --release -t lib/main.dart
+        Move-Item build/windows/x64/runner/Release out-pokaz
+        Rename-Item out-pokaz/desing_app.exe "3D-Kamron-Pokaz.exe"
 
-    - name: Upload Windows Build
+    # Программа 2: «Заказы» — для ноутбука, где принимают заказы с сайта
+    - name: Build «Заказы»
+      run: |
+        flutter build windows --release -t lib/main_orders.dart
+        Move-Item build/windows/x64/runner/Release out-zakazy
+        Rename-Item out-zakazy/desing_app.exe "3D-Kamron-Zakazy.exe"
+
+    - name: Upload «Показ»
       uses: actions/upload-artifact@v4
       with:
-        name: 3D-Kamron-Windows
-        path: build/windows/x64/runner/Release/
+        name: 3D-Kamron-Pokaz-Windows
+        path: out-pokaz/
+
+    - name: Upload «Заказы»
+      uses: actions/upload-artifact@v4
+      with:
+        name: 3D-Kamron-Zakazy-Windows
+        path: out-zakazy/

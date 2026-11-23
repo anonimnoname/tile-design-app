@@ -1,5 +1,5 @@
 name: tile_design_app
-description: "3D Kamron — 3D-конструктор плитки для показа клиентам на ноутбуке и ТВ."
+description: "3D Kamron — две программы: «Показ» (3D-конструктор на ТВ) и «Заказы» (приём заказов с сайта)."
 publish_to: 'none'
 
 version: 2.0.0+2
@@ -29,7 +29,15 @@ flutter:
   # Конструктор — тот же, что на сайте. Обновлять: tool/sync_web.sh
   assets:
     - assets/web/
-    - assets/web/css/
-    - assets/web/js/
-    - assets/web/vendor/
+    - assets/web/nav/
+    - assets/web/home/
+    - assets/web/catalog/
+    - assets/web/constructor/
+    - assets/web/new/
+    - assets/web/sizes/
+    - assets/web/contacts/
+    - assets/web/cart/
+    - assets/web/shared/
+    - assets/web/shared/data/
+    - assets/web/shared/vendor/
     - assets/fonts/

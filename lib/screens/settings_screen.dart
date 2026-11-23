@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/app_settings.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, required this.settings});
+  const SettingsScreen({super.key, required this.settings, this.showAdminPath = true});
   final AppSettings settings;
+  final bool showAdminPath;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -48,12 +49,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: url,
               decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'https://ваш-сайт.uz'),
             ),
+            if (widget.showAdminPath) ...[
             const SizedBox(height: 24),
             const Text('Адрес админки на сайте', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             const Text('То, что задано на сервере в ADMIN_PATH (например, kamron-panel).', style: TextStyle(color: Color(0xFFB5AC9F))),
             const SizedBox(height: 12),
             TextField(controller: admin, decoration: const InputDecoration(border: OutlineInputBorder(), prefixText: '/')),
+            ],
             const SizedBox(height: 28),
             FilledButton(onPressed: _save, child: const Padding(padding: EdgeInsets.all(12), child: Text('Сохранить'))),
           ]),
