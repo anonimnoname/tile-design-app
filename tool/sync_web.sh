@@ -9,6 +9,6 @@ if [ ! -f "$SITE/index.html" ]; then echo "Не найден сайт: $SITE/ind
 mkdir -p "$DEST/css" "$DEST/js" "$DEST/vendor"
 cp "$SITE/index.html" "$SITE/favicon.svg" "$DEST/"
 cp "$SITE/css/style.css" "$DEST/css/"
-for f in config.js catalog.js textures.js plan.js scene3d.js app.js; do cp "$SITE/js/$f" "$DEST/js/"; done
+for f in config.js catalog.js i18n.js textures.js plan.js scene3d.js app.js; do cp "$SITE/js/$f" "$DEST/js/"; done
 cp "$SITE/vendor/three.bundle.js" "$SITE/vendor/three.LICENSE" "$DEST/vendor/"
 echo "Готово: конструктор скопирован в $DEST"

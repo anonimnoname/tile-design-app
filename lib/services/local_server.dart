@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 
 import 'app_settings.dart';
 import 'catalog_store.dart';
+import 'invoice_pdf.dart';
 
 /// Маленький сервер внутри программы: отдаёт конструктор (assets/web),
 /// каталог (свой или с сайта, с кэшем — работает без интернета) и фото плитки.
@@ -41,6 +42,7 @@ class LocalServer {
     final path = Uri.decodeComponent(req.uri.path);
     try {
       if (path == '/api/catalog') return await _catalog(req);
+      if (path == '/app/invoice' && req.method == 'POST') return await _invoice(req);
       if (path.startsWith('/uploads/')) return await _image(req, p.basename(path));
       if (path.startsWith('/api/')) {
         return _send(req, 404, 'application/json; charset=utf-8', utf8.encode('{"error":"Недоступно в программе"}'));
@@ -53,6 +55,18 @@ class LocalServer {
       return _send(req, 404, 'text/plain; charset=utf-8', utf8.encode('Not found'));
     }
   }
+
+  /// Печать накладной из конструктора — PDF и окно печати Windows.
+  Future<void> _invoice(HttpRequest req) async {
+    final body = await utf8.decoder.bind(req).join();
+    if (body.length > 8 * 1024 * 1024) return _send(req, 413, 'text/plain', utf8.encode('Too large'));
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    _send(req, 200, 'application/json; charset=utf-8', utf8.encode('{"ok":true}'));
+    await onInvoice(data);
+  }
+
+  /// Можно подменить в тестах.
+  Future<void> Function(Map<String, dynamic>) onInvoice = InvoicePdf.printInvoice;
 
   /// Каталог: с сайта (если указан адрес) с кэшем на случай без интернета, иначе свой.
   Future<void> _catalog(HttpRequest req) async {

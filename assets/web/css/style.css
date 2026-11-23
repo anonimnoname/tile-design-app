@@ -511,7 +511,11 @@ body.app .page-pad { padding-top: 88px; }
   body > *:not(.invoice) { display: none !important; }
   body { background: #fff; color: #000; font-size: 9.5pt; }
   .invoice { display: block !important; }
-  .invoice header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5pt solid #000; padding-bottom: 4mm; margin-bottom: 4mm; }
+  .invoice header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5pt solid #000; padding-bottom: 3mm; margin-bottom: 3mm; }
+  .inv-title { font-size: 14pt; letter-spacing: .05em; }
+  .inv-h { font-weight: 800; font-size: 8.5pt; margin: 2.5mm 0 1mm; }
+  .inv-m { margin: 0 0 .6mm; font-size: 8.5pt; }
+  .inv-foot { text-align: center; }
   .invoice h1 { font-family: var(--serif); font-size: 20pt; margin: 0; }
   .invoice header p { margin: 1mm 0 0; }
   .inv-no { text-align: right; display: grid; }
@@ -530,3 +534,9 @@ body.app .page-pad { padding-top: 88px; }
 .pw-list label { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; align-items: center; font-size: 14px; margin-bottom: 8px; }
 .pw-list select { width: 100%; padding: 8px 12px; font-size: 14px; }
 .pl-num { fill: var(--accent-2); }
+
+.stats b { white-space: nowrap; }
+@media (min-width: 901px) { .stats b { font-size: clamp(36px, 3.4vw, 52px); } }
+
+.lang-btn { border: 0; background: none; color: inherit; font-weight: 800; font-size: 13px; letter-spacing: .08em; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .85; transition: opacity .3s, transform .3s var(--ease); }
+.lang-btn:hover { opacity: 1; transform: scale(1.06); }

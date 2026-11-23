@@ -18,6 +18,7 @@
     <a href="#/" class="brand" aria-label="На главную"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span data-shop="name">Магазин</span></a>
     <div class="hdr-right">
       <a class="hdr-link" href="#/constructor">3D-конструктор</a>
+      <button class="lang-btn" id="langBtn" aria-label="Til / Язык">UZ</button>
       <button class="cart-btn" id="cartBtn" aria-label="Корзина">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
         <span class="cart-count" id="cartCount" hidden>0</span>
@@ -59,7 +60,7 @@
             <span class="line"><span>Меньше швов.</span></span>
             <span class="line"><span><em>Больше простора.</em></span></span>
           </h1>
-          <p class="hero-lead">Керамогранит 60×120, 75×150 и 80×135 см для ванной, кухни, гостиной и фасада. Соберите свою комнату в 3D и посмотрите, как ляжет плитка, ещё до покупки.</p>
+          <p class="hero-lead">Более 20 лет и 100 000 довольных клиентов. Самая стильная и новая плитка 60×120, 75×150 и 80×135 см по приемлемым ценам. Соберите свою комнату в 3D до покупки.</p>
           <div class="hero-cta">
             <a href="#/constructor" class="btn btn-light">Собрать комнату в 3D</a>
             <a href="#/catalog" class="btn btn-line">Смотреть коллекции</a>
@@ -72,15 +73,15 @@
       <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></div>
 
       <section class="about wrap" id="homeAbout">
-        <div class="about-num reveal"><span class="big" data-count id="yearsNum">0</span><span class="big-suf">лет</span><p>с плиткой</p></div>
+        <div class="about-num reveal"><span class="big" data-count data-suf="+" id="yearsNum">0</span><span class="big-suf">лет</span><p>продаём кафельную плитку</p></div>
         <div class="about-text">
-          <h2 class="reveal">Мы продаём плитку с <span data-since></span> года и знаем, как она выглядит не на картинке, а у вас дома</h2>
-          <p class="reveal" style="--d:.1s">Каждый месяц привозим новые коллекции крупного формата: мрамор, оникс, камень, бетон, терраццо. Поможем выбрать, посчитаем всё до коробки и привезём домой. А если вы далеко, оформите заказ онлайн: оплатит тот, кто примет плитку.</p>
+          <h2 class="reveal">Более 20 лет мы занимаемся продажей кафельной плитки</h2>
+          <p class="reveal" style="--d:.1s">Более 100 тысяч довольных клиентов. У нас вы найдёте всё самое стильное и новое по приемлемым ценам. Каждый месяц привозим новые коллекции крупного формата, поможем выбрать, посчитаем всё до коробки и привезём домой.</p>
           <ul class="stats">
-            <li class="reveal" style="--d:.15s"><b data-count id="statModels">0</b><span>моделей в наличии</span></li>
-            <li class="reveal" style="--d:.25s"><b>3</b><span>крупных формата</span></li>
-            <li class="reveal" style="--d:.35s"><b data-count id="statStyles">0</b><span>стилей</span></li>
-            <li class="reveal" style="--d:.45s"><b>1×</b><span>в месяц новые поставки</span></li>
+            <li class="reveal" style="--d:.15s"><b data-count data-suf="+" id="statYears">0</b><span>лет на рынке</span></li>
+            <li class="reveal" style="--d:.25s"><b data-count data-suf="+" id="statClients">0</b><span>довольных клиентов</span></li>
+            <li class="reveal" style="--d:.35s"><b>3</b><span>крупных формата</span></li>
+            <li class="reveal" style="--d:.45s"><b data-count id="statStyles">0</b><span>стилей</span></li>
           </ul>
         </div>
       </section>
@@ -293,6 +294,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/catalog.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/textures.js"></script>
   <script src="vendor/three.bundle.js"></script>
   <script src="js/plan.js"></script>

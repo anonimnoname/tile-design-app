@@ -54,6 +54,7 @@
       title: 'Кухня', icon: '🍳', plan: true, paint: PAINTS, windows: true,
       surfaces: [
         { key: 'apron', label: 'Фартук', use: 'wall' },
+        { key: 'walls', label: 'Стены целиком плиткой', use: 'wall', optional: true },
         { key: 'floor', label: 'Пол', use: 'floor', isFloor: true }
       ]
     },
@@ -104,6 +105,7 @@
         shape: 'rect', W: 3.2, D: 3.0, H: 2.7, poly: PL.SHAPES.rect.make(3.2, 3.0),
         grout: '#f4f3ef', groutMm: 2, paint: '#f3efe8', showTiles: true,
         apron: surf('onyx-pearl-60x120', { rotate: true }, 'wall'),
+        walls: surf('solid-ivory-60x120', { enabled: false }, 'wall'),
         floor: surf('microcement-sand-75x150')
       },
       living: {
@@ -188,6 +190,7 @@
   // плитка конкретной стены: своя (режим «каждая стена отдельно») или общая
   function wallSurf(rs, e) {
     const id = rs.perWall && rs.perWall.enabled && rs.perWall.map && rs.perWall.map[e.i];
+    if (id === '__floor') return Object.assign({}, rs.wall, { tile: rs.floor.tile, rotate: false });
     return id && byId(id) ? Object.assign({}, rs.wall, { tile: id, rotate: false }) : rs.wall;
   }
   let tileQuery = '';
@@ -272,9 +275,11 @@
         if (rs.wallLow.enabled) paintTiles(set, full(0, rs.wallLow.height), tileOpts(rs, rs.wallLow, 'bottom'));
         if (rs.accent && rs.accent.enabled && e === accentEdge(rs, g)) paintTiles(set, full(0, H), tileOpts(rs, rs.accent, 'bottom'));
       } else if (kind === 'kitchen') {
-        paintPaint(set, rs.paint, e.i + 3);
+        const wallsOn = rs.walls && rs.walls.enabled;
+        if (wallsOn) paintTiles(set, full(0, H), tileOpts(rs, rs.walls, 'bottom'));
+        else paintPaint(set, rs.paint, e.i + 3);
         if (e === g.main) paintTiles(set, { x: 0.03, y: H - 1.5, w: e.len - 0.06, h: 0.62 }, tileOpts(rs, rs.apron, 'bottom'));
-        skirting(set);
+        if (!wallsOn) skirting(set);
       } else {
         if (e === accentEdge(rs, g) && rs.accent.enabled) paintTiles(set, full(0, H), tileOpts(rs, rs.accent, 'bottom'));
         else paintPaint(set, rs.paint, e.i + 3);
@@ -381,6 +386,7 @@
         <div class="row">
           ${`<select data-layout="${sd.key}" aria-label="Раскладка">${layoutsFor(tile).map(l => `<option value="${l}"${l === sf.layout ? ' selected' : ''}>${LAYOUTS[l]}</option>`).join('')}</select>`}
           ${tile.w !== tile.h && sf.layout !== 'herringbone' ? `<button class="chip${sf.rotate ? ' on' : ''}" data-rotate="${sd.key}">⟲ Повернуть 90°</button>` : ''}
+          ${def.plan ? `<button class="chip" data-all="${sd.key}" title="Поставить эту плитку на стены, пол и фартук">⇄ На всё</button>` : ''}
           ${sd.isFloor ? `<button class="chip" data-optimize="${sd.key}" title="Сдвинуть раскладку так, чтобы было меньше подрезки">✂ Меньше подрезки</button>` : ''}
         </div>
         ${sd.isFloor ? `<label class="check"><input type="checkbox" data-showtiles ${rs.showTiles ? 'checked' : ''}> Показать раскладку на плане</label>` : ''}
@@ -394,7 +400,7 @@
       const wt = CAT.filter(t => t.use.includes('wall'));
       h += `<section class="p-sec${pw.enabled ? '' : ' off'}"><div class="p-head"><h4>Каждая стена отдельно</h4><label class="switch"><input type="checkbox" data-perwall ${pw.enabled ? 'checked' : ''} aria-label="Каждая стена отдельно"><span></span></label></div>
         <div class="p-body pw-list">${roomGeo(rs).edges.filter(e => e.kind !== 'open').map(e => `<label><span>Стена ${e.i + 1} — ${e.len.toFixed(2)} м</span><select data-pwall="${e.i}">
-          <option value="">Как основные стены</option>${wt.map(t => `<option value="${esc(t.id)}"${pw.map[e.i] === t.id ? ' selected' : ''}>${esc(t.name)} ${sizeTitle(t)}</option>`).join('')}</select></label>`).join('')}
+          <option value="">Как основные стены</option><option value="__floor"${pw.map[e.i] === '__floor' ? ' selected' : ''}>Как пол (${esc(byId(rs.floor.tile).name)})</option>${wt.map(t => `<option value="${esc(t.id)}"${pw.map[e.i] === t.id ? ' selected' : ''}>${esc(t.name)} ${sizeTitle(t)}</option>`).join('')}</select></label>`).join('')}
         <p class="note">Номера стен видны на плане: стена 1 начинается с левого верхнего угла и идёт по часовой стрелке.</p></div></section>`;
     }
     h += `<section class="p-sec"><h4>Затирка (швы)</h4><div class="colors">${GROUTS.map(([c, n]) =>
@@ -457,6 +463,15 @@
       if (!layoutsFor(t).includes(sf.layout)) sf.layout = 'straight';
       if (t.defaultLayout && layoutsFor(t).includes(t.defaultLayout)) sf.layout = t.defaultLayout;
     } else if (b.dataset.rotate) { const sf = rs[b.dataset.rotate]; sf.rotate = !sf.rotate; sf.ox = sf.oy = 0; }
+    else if (b.dataset.all) {
+      const t = byId(rs[b.dataset.all].tile);
+      for (const sd of ROOMS[state.room].surfaces) {
+        if (!t.use.includes(sd.use) || (sd.optional && sd.key !== 'walls')) continue;
+        Object.assign(rs[sd.key], { tile: t.id, enabled: true, rotate: false, ox: 0, oy: 0 });
+      }
+      if (rs.perWall) rs.perWall.enabled = false;
+      toast(`«${t.name}» — на всех поверхностях`);
+    }
     else if (b.dataset.grout) rs.grout = b.dataset.grout;
     else if (b.dataset.paint) rs.paint = b.dataset.paint;
     else if (b.dataset.shape) {
@@ -563,7 +578,14 @@
         if (accArea) byArea('Акцентная стена', rs.accent, accArea);
         void P; void doors;
       } else if (kind === 'kitchen') {
-        byArea('Фартук', rs.apron, (g.main.len - 0.06) * 0.62);
+        const apronArea = (g.main.len - 0.06) * 0.62;
+        byArea('Фартук', rs.apron, apronArea);
+        if (rs.walls && rs.walls.enabled) {
+          let wa = 0;
+          for (const e of g.edges) if (e.kind !== 'open') wa += e.len * H - (e === g.door ? DOOR_W * DOOR_H : 0) - (e === g.main ? apronArea : 0);
+          wa -= windowsFor(kind, g).length * 1.4 * 1.5;
+          byArea('Стены', rs.walls, Math.max(0, wa));
+        }
       } else if (rs.accent.enabled) {
         byArea('Акцентная стена', rs.accent, accentEdge(rs, g).len * H);
       }
@@ -661,23 +683,59 @@
     if (e.key === 'ArrowLeft') { scene.setView('orbit'); scene.controls.autoRotate = true; markView('orbit'); }
   });
 
-  // ---- накладная / расчёт (A5) с картинкой комнаты ----
-  function printInvoice() {
+  // ---- накладная (A5), как в прежней программе 3D Kamron, плюс картинка комнаты ----
+  function invoiceData() {
     const kind = state.room, rs = state[kind], rr = rows(), total = rr.reduce((a, r) => a + r.sum, 0);
-    const dims = ROOMS[kind].plan ? `${ROOMS[kind].title}: пол ${PL.area(rs.poly).toFixed(2)} м², ${rs.W}×${rs.D} м, высота ${rs.H} м`
-      : `${ROOMS[kind].title}: дом ${rs.HW}×${rs.HD} м, двор ${rs.Y} м²`;
+    const dims = ROOMS[kind].plan
+      ? `${ROOMS[kind].title}: ${rs.W} м × ${rs.D} м (высота ${rs.H} м), пол ${PL.area(rs.poly).toFixed(2)} м²`
+      : `${ROOMS[kind].title}: дом ${rs.HW} × ${rs.HD} м, двор ${rs.Y} м²`;
+    // выбранные материалы — по каждой стене, как раньше «Стена 1…4» и «Пол»
+    const mats = [];
+    const tline = (label, t) => mats.push({ label, name: t.name, size: sizeTitle(t), price: t.price });
+    if (ROOMS[kind].plan) {
+      const g = roomGeo(rs);
+      if (TILED[kind]) {
+        const accE = rs.accent && rs.accent.enabled ? accentEdge(rs, g) : null;
+        g.edges.filter(e => e.kind !== 'open').forEach(e => {
+          const t = byId(e === accE ? rs.accent.tile : wallSurf(rs, e).tile);
+          tline(`Стена ${e.i + 1}${e === g.door ? ' (с дверью)' : ''}`, t);
+        });
+        if (rs.wallLow.enabled) tline(`Низ стен до ${rs.wallLow.height.toFixed(2)} м`, byId(rs.wallLow.tile));
+      } else {
+        for (const sd of ROOMS[kind].surfaces) if (!sd.isFloor && rs[sd.key].enabled !== false) tline(sd.label, byId(rs[sd.key].tile));
+      }
+      tline('Пол', byId(rs.floor.tile));
+    } else for (const sd of ROOMS[kind].surfaces) tline(sd.label, byId(rs[sd.key].tile));
     const grout = (GROUTS.find(g => g[0] === rs.grout) || [, ''])[1];
-    const pic = scene ? scene.snapshot() : '';
+    const items = rr.map(r => ({ name: `${r.name}: ${r.tile.name} (${sizeTitle(r.tile)} см)`, pieces: r.pieces, boxes: r.boxes, area: +r.m2.toFixed(2), sum: Math.round(r.sum) }));
     const d = new Date();
+    return {
+      shop: S.name || '', phone: S.phone || '', address: S.address || '', currency: S.currency || 'сум',
+      number: `${d.getFullYear() % 100}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`,
+      date: d.toLocaleDateString('ru-RU'), dims, grout: `Затирка: ${grout.toLowerCase()}, шов ${rs.groutMm} мм`,
+      materials: mats, items, total: Math.round(total), image: scene ? scene.snapshot() : ''
+    };
+  }
+  async function printInvoice() {
+    const inv = invoiceData();
+    // в программе для ноутбука — печать через саму программу (PDF, как раньше)
+    if (APP) {
+      try {
+        const r = await fetch('/app/invoice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inv) });
+        if (r.ok) { toast('Открыто окно печати накладной'); return; }
+      } catch (e) { /* печатаем из браузера */ }
+    }
+    const cur = esc(inv.currency);
     $('#invoice').innerHTML = `
-      <header><div><h1>${esc(S.name || '')}</h1><p>${esc(S.address || '')} · ${esc(S.phone || '')}</p></div>
-        <div class="inv-no"><b>Расчёт / накладная</b><span>№ ${d.getFullYear() % 100}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}</span><span>${d.toLocaleDateString('ru-RU')}</span></div></header>
-      <div class="inv-main">${pic ? `<img src="${pic}" alt="">` : ''}
-        <div><p class="inv-room">${esc(dims)}</p><p>Затирка: ${esc(grout.toLowerCase())}, шов ${rs.groutMm} мм</p></div></div>
-      <table><thead><tr><th>Поверхность и плитка</th><th>Площадь</th><th>Коробок</th><th>Штук</th><th>Цена/м²</th><th>Сумма</th></tr></thead><tbody>
-        ${rr.map(r => `<tr><td><b>${esc(r.name)}</b> — ${esc(r.tile.name)} ${sizeTitle(r.tile)}, ${LAYOUTS[r.layout].toLowerCase()}</td><td>${r.area.toFixed(2)} м²</td><td>${r.boxes} (${r.m2.toFixed(2)} м²)</td><td>${r.pieces}</td><td>${fmt(r.tile.price)}</td><td>${fmt(r.sum)}</td></tr>`).join('')}
-      </tbody><tfoot><tr><td colspan="5">ИТОГО</td><td>${money(total)}</td></tr></tfoot></table>
-      <p class="inv-foot">Расчёт с запасом на подрезку. Клей и затирка не входят. Цены действительны на ${d.toLocaleDateString('ru-RU')}. Спасибо за выбор ${esc(S.name || '')}!</p>`;
+      <header><b class="inv-title">НАКЛАДНАЯ</b><h1>${esc(inv.shop)}</h1><div class="inv-no"><b>${esc(inv.phone)}</b><span>${esc(inv.address)}</span><span>№ ${inv.number} · ${inv.date}</span></div></header>
+      <div class="inv-main">${inv.image ? `<img src="${inv.image}" alt="">` : ''}
+        <div><p class="inv-room">Размеры помещения: ${esc(inv.dims)}</p><p>${esc(inv.grout)}</p>
+          <p class="inv-h">ВЫБРАННЫЕ МАТЕРИАЛЫ:</p>
+          ${inv.materials.map(m => `<p class="inv-m">• ${esc(m.label)}: ${esc(m.name)} (${esc(m.size)} см) — ${fmt(m.price)} ${cur}/м²</p>`).join('')}</div></div>
+      <p class="inv-h">ИТОГОВЫЙ РАСЧЁТ:</p>
+      <table><tbody>${inv.items.map(i => `<tr><td>${esc(i.name)} (${i.pieces} шт. / ${i.boxes} кор. / ${i.area.toFixed(2)} м²)</td><td>${fmt(i.sum)} ${cur}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>ИТОГО К ОПЛАТЕ:</td><td>${fmt(inv.total)} ${cur}</td></tr></tfoot></table>
+      <p class="inv-foot">Спасибо за выбор ${esc(inv.shop)}!</p>`;
     setTimeout(() => window.print(), 50);
   }
 
@@ -896,15 +954,15 @@
     $$('[data-shop-map]').forEach(el => { el.href = S.mapUrl || '#/contacts'; });
     $$('[data-hold]').forEach(el => { el.textContent = S.holdDays; });
     $$('[data-delivery]').forEach(el => { el.textContent = S.deliveryNote || ''; });
-    $$('[data-since]').forEach(el => { el.textContent = S.sinceYear || ''; });
+    $$('[data-years]').forEach(el => { el.textContent = (+S.years || 20) + '+'; });
     $('#year').textContent = new Date().getFullYear();
   }
 
   // ---------------- главная ----------------
   function renderHome() {
-    const years = Math.max(1, new Date().getFullYear() - (+S.sinceYear || new Date().getFullYear()));
-    $('#yearsNum').dataset.to = years;
-    $('#statModels').dataset.to = CAT.filter(t => t.inStock).length;
+    $('#yearsNum').dataset.to = +S.years || 20;
+    $('#statYears').dataset.to = +S.years || 20;
+    $('#statClients').dataset.to = +S.clients || 100000;
     $('#statStyles').dataset.to = STYLES.filter(s => CAT.some(t => t.style === s.id)).length;
     // бегущая строка
     const words = STYLES.map(s => s.title).concat(SIZES.map(z => z.title));
@@ -957,8 +1015,8 @@
     $$('.reveal:not(.in)').forEach(el => revealIO.observe(el));
   }
   function countUp(el) {
-    const to = +el.dataset.to || 0, t0 = performance.now(), dur = 1600;
-    const tick = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 4); el.textContent = Math.round(to * e); if (k < 1) requestAnimationFrame(tick); };
+    const to = +el.dataset.to || 0, t0 = performance.now(), dur = 1600, suf = el.dataset.suf || '';
+    const tick = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 4); el.textContent = fmt(to * e) + (k >= 1 ? suf : ''); if (k < 1) requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   }
 
