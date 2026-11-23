@@ -20,6 +20,12 @@ class AppSettings {
   /// Программа «Заказы»: открывать окно заказов сразу при запуске.
   bool autoOpen = true;
 
+  /// Вход в админку сайта (запоминается на 30 дней, как в браузере).
+  String sid = '';
+
+  /// Номер последнего заказа, о котором уже уведомили.
+  int lastOrderId = 0;
+
   File get _file => File(p.join(dir.path, 'settings.json'));
   Directory get imagesDir => Directory(p.join(dir.path, 'images'));
   Directory get remoteImagesDir => Directory(p.join(dir.path, 'remote_images'));
@@ -40,6 +46,8 @@ class AppSettings {
       s.serverUrl = normalizeUrl(j['serverUrl'] as String? ?? '');
       s.adminPath = (j['adminPath'] as String? ?? 'admin').trim();
       s.autoOpen = j['autoOpen'] as bool? ?? true;
+      s.sid = j['sid'] as String? ?? '';
+      s.lastOrderId = (j['lastOrderId'] as num?)?.toInt() ?? 0;
     } catch (_) {
       // первый запуск — настройки по умолчанию
     }
@@ -47,7 +55,7 @@ class AppSettings {
   }
 
   Future<void> save() async {
-    await _file.writeAsString(jsonEncode({'serverUrl': serverUrl, 'adminPath': adminPath, 'autoOpen': autoOpen}));
+    await _file.writeAsString(jsonEncode({'serverUrl': serverUrl, 'adminPath': adminPath, 'autoOpen': autoOpen, 'sid': sid, 'lastOrderId': lastOrderId}));
   }
 
   /// «3dkamron.uz/» → «https://3dkamron.uz»

@@ -1,17 +1,21 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../main.dart' show kDark2, kGold, kLight;
 import '../services/app_settings.dart';
 import '../services/autostart.dart';
 import '../services/browser_launcher.dart';
+import '../services/order_watcher.dart';
+import '../services/site_api.dart';
+import 'admin/login_gate.dart';
+import 'admin/orders_screen.dart';
+import 'admin/products_screen.dart';
+import 'admin/shop_settings_screen.dart';
 import 'settings_screen.dart';
 
 const _autostartName = '3D Kamron Zakazy';
 
-/// «3D Kamron Заказы»: окно с заказами сайта (админка) в отдельном окне Edge.
-/// Новые заказы приходят уведомлением в углу экрана Windows (push), даже когда окно закрыто.
+/// «3D Kamron Заказы» — админка сайта прямо в программе:
+/// заказы приходят сами (с уведомлением Windows), товары и настройки — одна база с сайтом.
 class OrdersHomeScreen extends StatefulWidget {
   const OrdersHomeScreen({super.key, required this.settings});
   final AppSettings settings;
@@ -21,127 +25,109 @@ class OrdersHomeScreen extends StatefulWidget {
 }
 
 class _OrdersHomeScreenState extends State<OrdersHomeScreen> {
-  String status = '';
-  bool autostart = false;
-
-  AppSettings get s => widget.settings;
+  late final api = SiteApi(widget.settings);
+  late final watcher = OrderWatcher(api);
+  int tab = 0;
+  int gateKey = 0;
+  bool started = false;
 
   @override
   void initState() {
     super.initState();
-    autostart = Autostart.isOn(_autostartName);
-    _check().then((ok) {
-      if (ok && s.autoOpen) _openOrders();
-    });
+    watcher.onNotificationTap = () => setState(() => tab = 0);
+    watcher.addListener(() { if (mounted) setState(() {}); });
   }
 
-  Future<bool> _check() async {
-    if (!s.usesServer) {
-      setState(() => status = 'Впишите адрес сайта в настройках (шестерёнка справа вверху).');
-      return false;
-    }
-    setState(() => status = 'Проверяем связь с сайтом…');
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
-    try {
-      final rq = await client.getUrl(Uri.parse('${s.serverUrl}/api/catalog'));
-      final rs = await rq.close().timeout(const Duration(seconds: 10));
-      await rs.drain<void>();
-      final ok = rs.statusCode == 200;
-      if (mounted) setState(() => status = ok ? 'Сайт на связи: ${s.serverUrl}' : 'Сайт ответил ошибкой ${rs.statusCode}');
-      return ok;
-    } catch (_) {
-      if (mounted) setState(() => status = 'Нет связи с сайтом. Проверьте интернет и адрес сайта.');
-      return false;
-    } finally {
-      client.close(force: true);
-    }
+  @override
+  void dispose() {
+    watcher.stop();
+    super.dispose();
   }
 
-  Future<void> _openOrders() => BrowserLauncher.openApp(s.adminUrl, profileDir: s.browserProfileDir.path);
+  void _startWatching() {
+    if (started) return;
+    started = true;
+    watcher.start();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.settings;
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(padding: const EdgeInsets.all(32), children: [
-              Row(children: [
-                const Icon(Icons.receipt_long, color: kGold, size: 34),
-                const SizedBox(width: 12),
-                const Text('3D Kamron · Заказы', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: kLight)),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Настройки',
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () async {
-                    await Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(settings: s)));
-                    await _check();
-                  },
-                ),
-              ]),
-              const SizedBox(height: 28),
-              Material(
-                color: kLight,
-                borderRadius: BorderRadius.circular(18),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: s.usesServer ? _openOrders : null,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 22, vertical: 22),
-                    child: Row(children: [
-                      Icon(Icons.inbox_outlined, size: 36, color: Color(0xFF151412)),
-                      SizedBox(width: 18),
-                      Expanded(
-                        child: Text('Открыть заказы',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF151412))),
-                      ),
-                      Icon(Icons.chevron_right, color: Color(0xFF151412)),
-                    ]),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(status, style: const TextStyle(color: Color(0xFFB5AC9F))),
-              const SizedBox(height: 22),
-              SwitchListTile(
-                value: s.autoOpen,
-                title: const Text('Открывать заказы сразу при запуске программы'),
-                onChanged: (v) async {
-                  s.autoOpen = v;
-                  await s.save();
-                  setState(() {});
-                },
-              ),
-              if (Autostart.supported(_autostartName))
-                SwitchListTile(
-                  value: autostart,
-                  title: const Text('Запускать вместе с Windows'),
-                  subtitle: const Text('Ноутбук включили — заказы уже открыты'),
-                  onChanged: (v) async {
-                    await Autostart.set(_autostartName, v);
-                    setState(() => autostart = Autostart.isOn(_autostartName));
-                  },
-                ),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: kDark2, borderRadius: BorderRadius.circular(16)),
-                child: const Text(
-                  'Один раз на этом ноутбуке:\n'
-                  '1. Нажмите «Открыть заказы» и войдите паролем админки.\n'
-                  '2. В окне заказов нажмите «🔔 Включить уведомления» и разрешите.\n\n'
-                  'Дальше каждый новый заказ всплывает в углу экрана Windows — даже если окно заказов закрыто. '
-                  'Щелчок по уведомлению открывает заказ. В заказе — кнопки «Подтвердить в WhatsApp / Telegram» '
-                  'с готовым сообщением и реквизитами.',
-                  style: TextStyle(color: Color(0xFFB5AC9F), height: 1.5),
-                ),
-              ),
-            ]),
+      appBar: AppBar(
+        backgroundColor: kDark2,
+        title: const Row(children: [
+          Icon(Icons.receipt_long, color: kGold),
+          SizedBox(width: 10),
+          Text('3D Kamron · Заказы', style: TextStyle(color: kLight, fontWeight: FontWeight.w700)),
+        ]),
+        actions: [
+          if (watcher.updated != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Center(child: Text('обновлено ${_hm(watcher.updated!)}', style: const TextStyle(color: Color(0xFFB5AC9F), fontSize: 13))),
+            ),
+          IconButton(
+            tooltip: 'Открыть админку в браузере',
+            icon: const Icon(Icons.open_in_browser),
+            onPressed: s.usesServer ? () => BrowserLauncher.openDefault(s.adminUrl) : null,
           ),
-        ),
+          PopupMenuButton<String>(
+            tooltip: 'Ещё',
+            onSelected: (v) async {
+              if (v == 'settings') {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(settings: s)));
+                setState(() { started = false; gateKey++; });
+              } else if (v == 'autostart') {
+                await Autostart.set(_autostartName, !Autostart.isOn(_autostartName));
+                setState(() {});
+              } else if (v == 'logout') {
+                watcher.stop();
+                await api.logout();
+                setState(() { started = false; gateKey++; });
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'settings', child: Text('Адрес сайта')),
+              if (Autostart.supported(_autostartName))
+                CheckedPopupMenuItem(value: 'autostart', checked: Autostart.isOn(_autostartName), child: const Text('Запускать вместе с Windows')),
+              const PopupMenuItem(value: 'logout', child: Text('Выйти')),
+            ],
+          ),
+        ],
+      ),
+      body: LoginGate(
+        key: ValueKey(gateKey),
+        api: api,
+        child: Builder(builder: (context) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _startWatching());
+          return Row(children: [
+            NavigationRail(
+              selectedIndex: tab,
+              onDestinationSelected: (i) => setState(() => tab = i),
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                NavigationRailDestination(
+                  icon: Badge(isLabelVisible: watcher.newCount > 0, label: Text('${watcher.newCount}'), child: const Icon(Icons.inbox_outlined)),
+                  label: const Text('Заказы'),
+                ),
+                const NavigationRailDestination(icon: Icon(Icons.grid_view), label: Text('Товары')),
+                const NavigationRailDestination(icon: Icon(Icons.storefront_outlined), label: Text('Магазин')),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: IndexedStack(index: tab, children: [
+                OrdersScreen(api: api, watcher: watcher),
+                ProductsScreen(api: api),
+                ShopSettingsScreen(api: api),
+              ]),
+            ),
+          ]);
+        }),
       ),
     );
   }
+
+  static String _hm(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }

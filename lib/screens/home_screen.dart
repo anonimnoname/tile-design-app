@@ -5,6 +5,9 @@ import '../services/app_settings.dart';
 import '../services/browser_launcher.dart';
 import '../services/catalog_store.dart';
 import '../services/local_server.dart';
+import '../services/site_api.dart';
+import 'admin/login_gate.dart';
+import 'admin/products_screen.dart';
 import 'catalog_screen.dart';
 import 'settings_screen.dart';
 
@@ -119,10 +122,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 _BigButton(
                   icon: Icons.grid_view,
                   title: 'Каталог плитки',
-                  subtitle: s.usesServer ? 'Просмотр. Менять товары — в админке сайта' : 'Добавить, изменить цену, фото, наличие',
+                  subtitle: s.usesServer ? 'Одна база с сайтом: поиск, цены, фото, наличие' : 'Добавить, изменить цену, фото, наличие',
                   onTap: () async {
-                    await Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => CatalogScreen(settings: s, store: widget.store)));
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => s.usesServer
+                                // сайт подключён — одна база товаров: правки сразу на сайте и на втором ноутбуке
+                                ? Scaffold(
+                                    appBar: AppBar(title: const Text('Каталог (база сайта)')),
+                                    body: LoginGate(
+                                      api: SiteApi(s),
+                                      child: ProductsScreen(api: SiteApi(s), onChanged: () => widget.server.fetchSiteCatalog()),
+                                    ),
+                                  )
+                                : CatalogScreen(settings: s, store: widget.store)));
+                    await widget.server.fetchSiteCatalog();
                     await _updateStatus();
                   },
                 ),

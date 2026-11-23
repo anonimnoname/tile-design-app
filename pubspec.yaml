@@ -16,6 +16,8 @@ dependencies:
   # печать накладной (как в прежней версии)
   printing: ^5.13.2
   pdf: ^3.10.8
+  # уведомление о новом заказе в углу экрана Windows
+  flutter_local_notifications: ^23.0.0
   # только чтобы перенести плитку из старой версии программы (SQLite)
   sqflite_common_ffi: ^2.3.4+4
 
