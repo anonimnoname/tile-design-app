@@ -1,8 +1,8 @@
 name: tile_design_app
-description: "A new Flutter project for tile design and room calculation."
+description: "3D Kamron — 3D-конструктор плитки для показа клиентам на ноутбуке и ТВ."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,15 +10,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  file_picker: ^8.0.0
-  sqflite: ^2.3.0
   path: ^1.9.0
-  printing: ^5.13.2  
-  pdf: ^3.10.8
+  path_provider: ^2.1.5
+  file_picker: ^8.0.0
+  # только чтобы перенести плитку из старой версии программы (SQLite)
   sqflite_common_ffi: ^2.3.4+4
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+  # Конструктор — тот же, что на сайте. Обновлять: tool/sync_web.sh
+  assets:
+    - assets/web/
+    - assets/web/css/
+    - assets/web/js/
+    - assets/web/vendor/
