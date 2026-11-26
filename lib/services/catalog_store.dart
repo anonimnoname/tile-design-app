@@ -39,9 +39,13 @@ class Tile {
   bool get isNew => data['isNew'] == true;
   List<String> get use => ((data['use'] ?? const []) as List).cast<String>();
 
-  /// Путь к фото на диске (для своих плиток) — из «/uploads/имя».
+  /// Все узоры модели: «/uploads/…».
+  List<String> get images =>
+      (data['images'] as List?)?.cast<String>() ?? (data['image'] is String ? [data['image'] as String] : const <String>[]);
+
+  /// Путь к фото на диске (для своих плиток) — из «/uploads/имя». Берётся первый узор.
   String? imageFile(AppSettings s) {
-    final img = data['image'] as String?;
+    final img = images.isEmpty ? null : images.first;
     if (img == null || !img.startsWith('/uploads/')) return null;
     return p.join(s.imagesDir.path, img.substring('/uploads/'.length));
   }
@@ -127,8 +131,10 @@ class CatalogStore {
 
   Future<void> remove(Tile t) async {
     tiles.removeWhere((x) => x.id == t.id);
-    final f = t.imageFile(settings);
-    if (f != null && !tiles.any((x) => x.data['image'] == t.data['image'])) {
+    for (final u in t.images) {
+      if (tiles.any((x) => x.images.contains(u))) continue;
+      final f = Tile({'image': u}).imageFile(settings);
+      if (f == null) continue;
       try {
         await File(f).delete();
       } catch (_) {}

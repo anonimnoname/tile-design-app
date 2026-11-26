@@ -155,49 +155,49 @@ class _CatalogScreenState extends State<CatalogScreen> {
     var style = kStyles.containsKey(d['style']) ? d['style'] as String : 'solid';
     final use = Set<String>.from((d['use'] as List? ?? const []).cast<String>());
     var inStock = d['inStock'] != false, isNew = d['isNew'] == true;
-    String? photo = d['image'] as String?;
+    final photos = <String>[...((d['images'] as List?)?.cast<String>() ?? (d['image'] is String ? [d['image'] as String] : const <String>[]))];
     String? error;
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (c) => StatefulBuilder(builder: (c, setD) {
-        final photoFile = photo != null ? File(Tile({'image': photo}).imageFile(widget.settings)!) : null;
         return AlertDialog(
           title: Text(existing == null ? 'Новая плитка' : 'Изменить плитку'),
           content: SizedBox(
             width: 520,
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      width: 110, height: 110,
-                      child: photoFile != null && photoFile.existsSync()
-                          ? Image.file(photoFile, fit: BoxFit.cover)
-                          : Container(color: const Color(0xFF3A3631), child: const Icon(Icons.photo_outlined, size: 40, color: kGold)),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.photo_camera_outlined),
-                        label: Text(photo == null ? 'Выбрать фото плитки' : 'Заменить фото'),
-                        onPressed: () async {
-                          final r = await FilePicker.platform.pickFiles(type: FileType.image);
-                          final path = r?.files.single.path;
-                          if (path != null) {
-                            final url = await widget.store.importPhoto(path);
-                            setD(() => photo = url);
-                          }
-                        },
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final (i, u) in photos.indexed)
+                    Stack(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(File(Tile({'image': u}).imageFile(widget.settings)!), width: 72, height: 72, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(width: 72, height: 72, child: Icon(Icons.broken_image))),
                       ),
-                      if (photo != null) TextButton(onPressed: () => setD(() => photo = null), child: const Text('Убрать фото')),
-                      const Text('Одна плитка, снятая ровно сверху, без бликов.', style: TextStyle(fontSize: 12, color: Color(0xFFB5AC9F))),
+                      Positioned(
+                        top: 2, right: 2,
+                        child: InkWell(
+                          onTap: () => setD(() => photos.removeAt(i)),
+                          child: const CircleAvatar(radius: 10, backgroundColor: Colors.black54, child: Icon(Icons.close, size: 13, color: Colors.white)),
+                        ),
+                      ),
                     ]),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(photos.isEmpty ? 'Выбрать узоры плитки' : 'Добавить узоры'),
+                    onPressed: () async {
+                      final r = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true);
+                      for (final path in r?.files.map((f) => f.path).whereType<String>() ?? const <String>[]) {
+                        final url = await widget.store.importPhoto(path);
+                        setD(() => photos.add(url));
+                      }
+                    },
                   ),
                 ]),
+                const SizedBox(height: 6),
+                Text(photos.isEmpty ? 'Все узоры модели: каждая плита ровно сверху, без бликов.' : 'Узоров: ${photos.length}. На стене они будут чередоваться.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFFB5AC9F))),
                 const SizedBox(height: 14),
                 TextField(controller: name, decoration: const InputDecoration(labelText: 'Название')),
                 const SizedBox(height: 10),
@@ -267,9 +267,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ..['isNew'] = isNew
                   ..['active'] = true
                   ..['material'] = Tile.materialFor(style);
-                if (photo != null) {
-                  d['image'] = photo;
+                if (photos.isNotEmpty) {
+                  d['images'] = List<String>.of(photos);
+                  d['image'] = photos.first;
                 } else {
+                  d.remove('images');
                   d.remove('image');
                 }
                 Navigator.pop(c, true);

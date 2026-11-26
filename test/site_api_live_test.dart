@@ -38,13 +38,15 @@ void main() {
     expect(ci.image.width * 2, ci.image.height);
     final photo = await api.uploadTilePhoto(f.path, 60, 120);
     expect(photo, startsWith('/uploads/'));
+    final photo2 = await api.uploadTilePhoto(f.path, 60, 120);
 
     final p = await api.saveProduct({
       'name': 'Тест из программы', 'w': 60, 'h': 120, 'price': 111000, 'box': 1.44, 'style': 'marble',
-      'use': ['wall', 'floor'], 'cats': ['universal'], 'inStock': true, 'isNew': true, 'active': true, 'image': photo,
+      'use': ['wall', 'floor'], 'cats': ['universal'], 'inStock': true, 'isNew': true, 'active': true, 'images': [photo, photo2], 'image': photo,
       'material': {'type': 'marble', 'c1': '#f1efea', 'c2': '#8b8e93', 'gloss': 0.9},
     });
     expect((await api.products()).length, before.length + 1);
+    expect((p['images'] as List).length, 2); // несколько узоров одной модели
     final u = await api.patchProduct(p['id'] as String, {'price': 120000, 'inStock': false});
     expect(u['price'], 120000);
     expect(u['inStock'], false);

@@ -121,7 +121,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Widget _row(Map<String, dynamic> p) {
-    final img = p['image'] as String?;
+    final img = ((p['images'] as List?)?.cast<String>().firstOrNull) ?? p['image'] as String?;
     final active = p['active'] != false;
     return Opacity(
       opacity: active ? 1 : 0.55,
@@ -228,7 +228,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     var st = kStyles.containsKey(d['style']) ? d['style'] as String : 'solid';
     final use = Set<String>.from((d['use'] as List? ?? const []).cast<String>());
     var inStock = d['inStock'] != false, isNew = d['isNew'] == true, active = d['active'] != false;
-    String? photo = d['image'] as String?;
+    // все узоры модели (у завода их обычно несколько)
+    final photos = <String>[...((d['images'] as List?)?.cast<String>() ?? (d['image'] is String ? [d['image'] as String] : const <String>[]))];
     String? error;
     var busy = false;
 
@@ -242,45 +243,51 @@ class _ProductsScreenState extends State<ProductsScreen> {
             width: 560,
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      width: 110, height: 110,
-                      child: photo != null
-                          ? Image.network('${widget.api.settings.serverUrl}$photo', fit: BoxFit.cover)
-                          : Container(color: const Color(0xFF3A3631), child: const Icon(Icons.photo_outlined, size: 40, color: kGold)),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      OutlinedButton.icon(
-                        icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_camera_outlined),
-                        label: Text(photo == null ? 'Загрузить фото плитки' : 'Заменить фото'),
-                        onPressed: busy
-                            ? null
-                            : () async {
-                                final r = await FilePicker.platform.pickFiles(type: FileType.image);
-                                final path = r?.files.single.path;
-                                if (path == null) return;
-                                setD(() => busy = true);
-                                try {
-                                  final wh = sizeKey.split('x').map(int.parse).toList();
-                                  final url = await widget.api.uploadTilePhoto(path, wh[0], wh[1]);
-                                  setD(() => photo = url);
-                                } catch (e) {
-                                  setD(() => error = '$e');
-                                } finally {
-                                  setD(() => busy = false);
-                                }
-                              },
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final (i, u) in photos.indexed)
+                    Stack(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network('${widget.api.settings.serverUrl}$u', width: 72, height: 72, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(width: 72, height: 72, child: Icon(Icons.broken_image))),
                       ),
-                      if (photo != null) TextButton(onPressed: () => setD(() => photo = null), child: const Text('Убрать фото')),
-                      const Text('Одна плита ровно сверху, без бликов. Обрежется под размер сама.', style: TextStyle(fontSize: 12, color: Color(0xFFB5AC9F))),
+                      Positioned(
+                        top: 2, right: 2,
+                        child: InkWell(
+                          onTap: () => setD(() => photos.removeAt(i)),
+                          child: const CircleAvatar(radius: 10, backgroundColor: Colors.black54, child: Icon(Icons.close, size: 13, color: Colors.white)),
+                        ),
+                      ),
                     ]),
+                  OutlinedButton.icon(
+                    icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(photos.isEmpty ? 'Загрузить узоры плитки' : 'Добавить узоры'),
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            final r = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: true);
+                            final paths = r?.files.map((f) => f.path).whereType<String>().toList() ?? const <String>[];
+                            if (paths.isEmpty) return;
+                            setD(() => busy = true);
+                            try {
+                              final wh = sizeKey.split('x').map(int.parse).toList();
+                              for (final path in paths) {
+                                final url = await widget.api.uploadTilePhoto(path, wh[0], wh[1]);
+                                setD(() => photos.add(url));
+                              }
+                            } catch (e) {
+                              setD(() => error = '$e');
+                            } finally {
+                              setD(() => busy = false);
+                            }
+                          },
                   ),
                 ]),
+                const SizedBox(height: 6),
+                Text(photos.isEmpty
+                    ? 'Загрузите все узоры модели (файлы рисунка от завода или фото каждой плиты сверху). Обрежутся под размер сами.'
+                    : 'Узоров: ${photos.length}. На стене плиты будут чередоваться, как в настоящей укладке.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFFB5AC9F))),
                 const SizedBox(height: 12),
                 TextField(controller: name, decoration: const InputDecoration(labelText: 'Название')),
                 Row(children: [
@@ -343,7 +350,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         'name': name.text.trim(), 'w': wh[0], 'h': wh[1], 'price': pr, 'box': bx,
                         'style': st, 'use': use.toList(), 'cats': Tile.catsFor(use.toList()),
                         'finish': finish.text.trim(), 'collection': collection.text.trim(), 'country': country.text.trim(),
-                        'inStock': inStock, 'isNew': isNew, 'active': active, 'image': photo ?? '',
+                        'inStock': inStock, 'isNew': isNew, 'active': active, 'images': photos, 'image': photos.isEmpty ? '' : photos.first,
                         if (isNewItem || st != existing['style']) 'material': _look(st),
                         if (d['defaultLayout'] != null) 'defaultLayout': d['defaultLayout'],
                       };
